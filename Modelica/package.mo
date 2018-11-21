@@ -8327,7 +8327,7 @@ dateModified = "2018-09-26 12:00:00Z",
 revisionId="$Format:%h %ci$",
 uses(Complex(version="3.2.3"), ModelicaServices(version="3.2.3")),
 conversion(
- noneFromVersion="3.2.2",
+ from(version="3.2.2", script="modelica://Modelica/Resources/Scripts/Dymola/ConvertModelica_from_3.2.2_to_3.2.3.mos"),
  noneFromVersion="3.2.1",
  noneFromVersion="3.2",
  noneFromVersion="3.1",
