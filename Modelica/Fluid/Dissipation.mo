@@ -3859,7 +3859,7 @@ Generally this function is numerically best used for the <strong> incompressible
         SI.ReynoldsNumber Re_check=if Re_lam < Re_lam_leave then Re_lam else Re_turb;
         //determine Re for transition regime
         SI.ReynoldsNumber Re_trans=if Re_lam >= Re_lam_leave then
-            Modelica.Fluid.Dissipation.Utilities.Functions.General.CubicInterpolation_Re(
+            Modelica.Fluid.Dissipation.Utilities.Functions.General.CubicInterpolation_DP(
             Re_check,
             Re_lam_leave,
             Re_turb_min,
@@ -4537,27 +4537,25 @@ This record is used as <strong> input record </strong> for the pressure loss fun
           "Volume flow rate";
         SI.Pressure dp_min=max(Modelica.Constants.eps, abs(IN_con.dp_min))
           "Start of approximation for decreasing pressure loss";
-        SI.VolumeFlowRate V_flow_smooth=if a > 0 and b <= 0 then (dp_min/a)^0.5 else 0
+        SI.VolumeFlowRate V_flow_smooth=if a > 0 then -b/(2*a) + ((b/(2*a))^
+            2 + dp_min/a)^0.5 else if a<=0 and b > 0 then dp_min/b else 0
           "Start of approximation for decreasing volume flow rate";
 
         //Documentation
 
       algorithm
         assert(a+b>0, "Please provide non-zero factors for either a or b of function dp=a*V_flow^2 + b*V_flow");
-
-        // Please note the function is reqularized for zero flow with the parameter b if b>0.
-
-        DP := a*(if a>0 and b<=0 then Dissipation.Utilities.Functions.General.SmoothPower(
+        DP := a*(if a>0 then Dissipation.Utilities.Functions.General.SmoothPower(
                 V_flow,
                 V_flow_smooth,
-                2) elseif a>0 and b>0 then V_flow*abs(V_flow) else 0) + b*V_flow;
+                2) else 0) + b*V_flow;
       annotation (Inline=false, smoothOrder(normallyConstant=IN_con) = 2,
                     inverse(m_flow=Modelica.Fluid.Dissipation.PressureLoss.General.dp_volumeFlowRate_MFLOW(
                 IN_con,
                 IN_var,
                 DP)), Documentation(info="<html>
 <p>
-Calculation of a generic pressure loss with linear and/or quadratic dependence on volume flow rate. <strong>Please note that the sum of a and b has to be greater zero</strong>.
+Calculation of a generic pressure loss with linear or quadratic dependence on volume flow rate.
 The function can be used to calculate pressure loss at known mass flow rate <strong> or </strong> mass flow rate at known pressure loss.
 </p>
 
@@ -4565,7 +4563,7 @@ The function can be used to calculate pressure loss at known mass flow rate <str
 Generally this  function is numerically best used for the <strong> incompressible case </strong>, where the mass flow rate (m_flow) is known (as state variable) in the used model and the corresponding pressure loss (DP) has to be calculated. On the other hand the  function <a href=\"modelica://Modelica.Fluid.Dissipation.PressureLoss.General.dp_volumeFlowRate_MFLOW\">dp_volumeFlowRate_MFLOW</a> is numerically best used for the <strong> compressible case </strong> if the pressure loss (dp) is known (out of pressures as state variable) and the mass flow rate (M_FLOW) has to be calculated. <a href=\"modelica://Modelica.Fluid.Dissipation.Utilities.SharedDocumentation.PressureLoss.General.dp_volumeFlowRate\">See more information</a>.
 </p>
 </html>", revisions="<html>
-2018-11-21 Stefan Wischhusen: Fixed problem for linear case (a=0 and b>0) and obsolete regularization for a>0 and b>0.
+2018-11-21 Stefan Wischhusen: Fixed problem for linear case (a=0 and b>0).
 </html>"));
       end dp_volumeFlowRate_DP;
 
@@ -4601,32 +4599,26 @@ Generally this  function is numerically best used for the <strong> incompressibl
 
       algorithm
         assert(a+b>0, "Please provide non-zero factors for either a or b of function dp=a*V_flow^2 + b*V_flow");
-
-        // Please note the function is reqularized for zero flow with the parameter b if b>0.
-
-        M_FLOW := IN_var.rho*(if a>0 and b<=0 then
-                Modelica.Fluid.Dissipation.Utilities.Functions.General.SmoothPower(
-                (1/a)*dp,
-                (1/a)*dp_min,
-                0.5)
-                elseif a>0 and b>0 then
-                sign(dp)*(-b/(2*a) + sqrt((b/(2*a))^2 + (1/a)*abs(dp)))
-                else b*dp);
+        M_FLOW := IN_var.rho*(if a>0 then (-b/(2*a) +
+          Modelica.Fluid.Dissipation.Utilities.Functions.General.SmoothPower(
+                (b/(2*a))^2 + (1/a)*dp,
+                (b/(2*a))^2 + (1/a)*dp_min,
+                0.5)) else dp/b);
       annotation (Inline=true, smoothOrder(normallyConstant=IN_con) = 2,
                     inverse(dp=Modelica.Fluid.Dissipation.PressureLoss.General.dp_volumeFlowRate_DP(
                 IN_con,
                 IN_var,
                 M_FLOW)), Documentation(info="<html>
 <p>
-Calculation of a generic pressure loss with linear or quadratic dependence on volume flow rate. <strong>Please note that the sum of a and b has to be greater zero</strong>.
+Calculation of a generic pressure loss with linear or quadratic dependence on volume flow rate.
 The function can be used to calculate pressure loss at known mass flow rate <strong> or </strong> mass flow rate at known pressure loss.
 </p>
 
 <p>
 Generally this  function is numerically best used for the <strong> compressible case </strong> if the pressure loss (dp) is known (out of pressures as state variable) and the mass flow rate (M_FLOW) has to be calculated. On the other hand the  function <a href=\"modelica://Modelica.Fluid.Dissipation.PressureLoss.General.dp_volumeFlowRate_DP\">dp_volumeFlowRate_DP</a> is numerically best used for the <strong> incompressible case </strong>, where the mass flow rate (m_flow) is known (as state variable) in the used model and the corresponding pressure loss (DP) has to be calculated. <a href=\"modelica://Modelica.Fluid.Dissipation.Utilities.SharedDocumentation.PressureLoss.General.dp_volumeFlowRate\">See more information</a>.
 </p>
-</html>",       revisions="<html>
-2018-11-21 Stefan Wischhusen: Fixed problem for linear case (a=0 and b>0) and obsolete regularization for a>0 and b>0.
+</html>", revisions="<html>
+2018-11-21 Stefan Wischhusen: Fixed problem for linear case (a=0 and b>0).
 </html>"));
       end dp_volumeFlowRate_MFLOW;
 
@@ -4638,7 +4630,7 @@ Generally this  function is numerically best used for the <strong> compressible 
           Modelica.Fluid.Dissipation.Utilities.Records.General.QuadraticVFLOW;
 
         SI.Pressure dp_min=0.1
-          "Start of approximation for decreasing pressure loss (only used for b=0)";
+          "Start of approximation for decreasing pressure loss";
 
         annotation (Documentation(info="<html>
 This record is used as <strong> input record </strong> for the pressure loss function
@@ -5371,7 +5363,7 @@ Generally this  function is numerically best used for the <strong> incompressibl
         SI.ReynoldsNumber Re_check=if Re_lam < Re_lam_leave then Re_lam else Re_turb;
         //determine Re for transition regime
         SI.ReynoldsNumber Re_trans=if Re_lam >= Re_lam_leave then
-            Modelica.Fluid.Dissipation.Utilities.Functions.General.CubicInterpolation_Re(
+            Modelica.Fluid.Dissipation.Utilities.Functions.General.CubicInterpolation_DP(
             Re_check,
             Re_lam_leave,
             Re_turb_min,
@@ -5504,7 +5496,7 @@ This record is used as <strong> input record </strong> for the pressure loss fun
           "Darcy friction factor";
         TYP.DarcyFrictionFactor lambda_FRI_calc=if Re < Re_lam_leave then 64/Re else
             if Re > Re_turb_min then lambda_FRI/Re^2 else
-            Modelica.Fluid.Dissipation.Utilities.Functions.General.CubicInterpolation_lambda(
+            Modelica.Fluid.Dissipation.Utilities.Functions.General.CubicInterpolation_MFLOW(
             Re,
             Re_lam_leave,
             Re_turb_min,
@@ -5600,7 +5592,7 @@ Generally this  function is numerically best used for the <strong> incompressibl
         SI.ReynoldsNumber Re_check=if Re_lam < Re_lam_leave then Re_lam else Re_turb;
         //determine Re for transition regime
         SI.ReynoldsNumber Re_trans=if Re_lam >= Re_lam_leave then
-            Modelica.Fluid.Dissipation.Utilities.Functions.General.CubicInterpolation_Re(
+            Modelica.Fluid.Dissipation.Utilities.Functions.General.CubicInterpolation_DP(
             Re_check,
             Re_lam_leave,
             Re_turb_min,
@@ -10745,7 +10737,7 @@ The heterogeneous approaches are analytically derived by minimising the momentum
       package General "Package with utility functions"
         extends Modelica.Icons.FunctionsPackage;
 
-        function CubicInterpolation_Re
+        function CubicInterpolation_DP
           extends Modelica.Icons.Function;
           import Modelica.Math;
           input Real Re_turbulent;
@@ -10781,14 +10773,10 @@ The heterogeneous approaches are analytically derived by minimising the momentum
 
         algorithm
           Re := Re1*(lambda2/lambda2_1)^(1 + dx*(c2 + dx*c3));
-          annotation (Inline=false, smoothOrder=5,
-            Documentation(revisions=
-                            "<html>
-2018-11-20 Stefan Wischhusen: Renamed function from CubicInterpolation_DP to CubicInterpolation_Re.
-</html>"));
-        end CubicInterpolation_Re;
+          annotation (Inline=false, smoothOrder=5);
+        end CubicInterpolation_DP;
 
-        function CubicInterpolation_lambda
+        function CubicInterpolation_MFLOW
           extends Modelica.Icons.Function;
           import Modelica.Math;
           input SI.ReynoldsNumber Re;
@@ -10822,12 +10810,8 @@ The heterogeneous approaches are analytically derived by minimising the momentum
 
         algorithm
           lambda2 := 64*Re1*(Re/Re1)^(1 + dx*(c2 + dx*c3));
-          annotation (Inline=false, smoothOrder=5,
-            Documentation(revisions=
-                            "<html>
-2018-11-20 Stefan Wischhusen: Renamed function from CubicInterpolation_MFLOW to CubicInterpolation_lambda.
-</html>"));
-        end CubicInterpolation_lambda;
+          annotation (Inline=false, smoothOrder=5);
+        end CubicInterpolation_MFLOW;
 
         function LambertW
           "Closed approximation of Lambert's w function for solving f(x) = x exp(x) for x"
